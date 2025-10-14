@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>岡山市の天気比較</title>
+
+<!-- PWA設定 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0077b6">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<style>
+  body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    background: #f8f9fa;
+    color: #333;
+  }
+  header {
+    background: #0077b6;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+  }
+  .tabs { display: flex; justify-content: space-around; background: #e9ecef; }
+  .tab { flex: 1; text-align: center; padding: 0.8rem; cursor: pointer; }
+  .tab.active { background: white; border-bottom: 2px solid #0077b6; font-weight: bold; }
+  .content { padding: 1rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+  th, td { border-bottom: 1px solid #ddd; padding: 0.5rem; text-align: center; }
+  th { background: #f1f1f1; }
+  .source { color: #0077b6; font-size: 0.8rem; }
+  footer { text-align: center; font-size: 0.8rem; color: #666; margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>岡山市の天気比較</h1>
+  <p>更新: 2025年10月14日 08:00</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="today">今日</div>
+  <div class="tab" data-tab="tomorrow">明日</div>
+  <div class="tab" data-tab="week">週間</div>
+</div>
+
+<div id="today" class="content">
+  <table>
+    <tr><th>サイト</th><th>天気</th><th>降水確率</th><th>降水量</th></tr>
+    <tr><td>ウェザーニュース</td><td>晴れのち雨</td><td>60%</td><td>4mm</td></tr>
+    <tr><td>天気.jp</td><td>曇り時々雨</td><td>50%</td><td>3mm</td></tr>
+    <tr><td>Yahoo天気</td><td>晴れのち曇り</td><td>40%</td><td>2mm</td></tr>
+    <tr><td>気象庁</td><td>晴れ</td><td>30%</td><td>1mm</td></tr>
+  </table>
+</div>
+
+<div id="tomorrow" class="content" style="display:none;">
+  <table>
+    <tr><th>サイト</th><th>天気</th><th>降水確率</th><th>降水量</th></tr>
+    <tr><td>ウェザーニュース</td><td>曇り</td><td>20%</td><td>0mm</td></tr>
+    <tr><td>天気.jp</td><td>曇り</td><td>30%</td><td>1mm</td></tr>
+    <tr><td>Yahoo天気</td><td>曇りのち晴れ</td><td>10%</td><td>0mm</td></tr>
+    <tr><td>気象庁</td><td>晴れ</td><td>10%</td><td>0mm</td></tr>
+  </table>
+</div>
+
+<div id="week" class="content" style="display:none;">
+  <table>
+    <tr><th>日付</th><th>ウェザーニュース</th><th>天気.jp</th><th>Yahoo</th><th>気象庁</th></tr>
+    <tr><td>10/15(火)</td><td>晴れ</td><td>晴れ</td><td>晴れ</td><td>晴れ</td></tr>
+    <tr><td>10/16(水)</td><td>曇り</td><td>曇り</td><td>曇り</td><td>曇り</td></tr>
+    <tr><td>10/17(木)</td><td>雨</td><td>雨</td><td>雨</td><td>雨</td></tr>
+  </table>
+</div>
+
+<footer>
+  <p>© 2025 岡山市天気比較 | Weathernews, tenki.jp, Yahoo天気, 気象庁</p>
+</footer>
+
+<script>
+  // タブ切り替え
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.content');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.style.display = 'none');
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).style.display = 'block';
+    });
+  });
+
+  // PWA用Service Worker登録
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('✅ Service Worker registered'))
+      .catch(err => console.log('❌ Service Worker failed:', err));
+  }
+</script>
+
+</body>
+</html>
