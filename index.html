@@ -4,143 +4,103 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>岡山市の天気比較</title>
-
-<!-- PWA設定 -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0077b6">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-
 <style>
-  body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 0; background: #f8f9fa; color: #333; }
+  body { font-family: sans-serif; background: #f7f7f7; margin: 0; }
   header { background: #0077b6; color: white; text-align: center; padding: 1rem; }
-  .tabs { display: flex; justify-content: space-around; background: #e9ecef; }
-  .tab { flex: 1; text-align: center; padding: 0.8rem; cursor: pointer; }
-  .tab.active { background: white; border-bottom: 2px solid #0077b6; font-weight: bold; }
-  .content { padding: 1rem; }
-  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-  th, td { border-bottom: 1px solid #ddd; padding: 0.5rem; text-align: center; }
-  th { background: #f1f1f1; }
-  .source { color: #0077b6; font-size: 0.8rem; }
-  footer { text-align: center; font-size: 0.8rem; color: #666; margin: 1rem 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+  th, td { padding: 0.6rem; border-bottom: 1px solid #ddd; text-align: center; }
+  th { background: #f0f0f0; }
+  .tabs { display: flex; }
+  .tab { flex: 1; text-align: center; padding: 0.8rem; cursor: pointer; background: #e9ecef; }
+  .tab.active { background: white; border-bottom: 2px solid #0077b6; }
+  footer { text-align: center; font-size: 0.8rem; color: #666; margin: 1rem; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>岡山市のリアル天気比較</h1>
+  <h1>岡山市の天気比較</h1>
   <p id="update-time">更新中...</p>
 </header>
 
 <div class="tabs">
   <div class="tab active" data-tab="today">今日</div>
-  <div class="tab" data-tab="tomorrow">明日</div>
   <div class="tab" data-tab="week">週間</div>
 </div>
 
 <div id="today" class="content">
-  <table id="todayTable">
-    <tr><th>項目</th><th>値</th></tr>
-    <tr><td>天気</td><td id="todayWeather">--</td></tr>
-    <tr><td>気温</td><td id="todayTemp">--</td></tr>
-    <tr><td>降水確率</td><td id="todayRainProb">--</td></tr>
-    <tr><td>降水量</td><td id="todayRain">--</td></tr>
-  </table>
-</div>
-
-<div id="tomorrow" class="content" style="display:none;">
-  <table id="tomorrowTable">
-    <tr><th>項目</th><th>値</th></tr>
-    <tr><td>天気</td><td id="tomorrowWeather">--</td></tr>
-    <tr><td>最高／最低気温</td><td id="tomorrowTemp">--</td></tr>
-    <tr><td>降水確率</td><td id="tomorrowRainProb">--</td></tr>
+  <table>
+    <tr><th>サイト</th><th>天気</th><th>気温</th><th>降水</th></tr>
+    <tr><td>OpenWeather</td><td id="ow-weather">-</td><td id="ow-temp">-</td><td id="ow-pop">-</td></tr>
+    <tr><td>気象庁</td><td id="jma-weather">-</td><td id="jma-temp">-</td><td id="jma-pop">-</td></tr>
+    <tr><td>MET Norway</td><td id="met-weather">-</td><td id="met-temp">-</td><td id="met-pop">-</td></tr>
   </table>
 </div>
 
 <div id="week" class="content" style="display:none;">
-  <table id="weekTable">
-    <tr><th>日付</th><th>天気</th><th>最高気温</th><th>最低気温</th><th>降水確率</th></tr>
-  </table>
+  <p style="text-align:center;margin-top:1rem;">週間予報（準備中）</p>
 </div>
 
 <footer>
-  <p>© 2025 岡山市天気比較 | Powered by OpenWeatherMap</p>
+  <p>© 2025 天気比較データ | OpenWeather / 気象庁 / MET Norway</p>
 </footer>
 
 <script>
-  // ======== ここに自分のAPIキーを入れてください ========
-  const API_KEY = "789f321d8b6cf36d45ac0ae811715656"; // ← 例: abcd1234efgh5678
-  const CITY = "Okayama.jp";
+const apiKey = "789f321d8b6cf36d45ac0ae811715656"; // ← あなたのAPIキーをここに
 
-  // タブ切り替え
-  const tabs = document.querySelectorAll('.tab');
-  const contents = document.querySelectorAll('.content');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      contents.forEach(c => c.style.display = 'none');
-      tab.classList.add('active');
-      document.getElementById(tab.dataset.tab).style.display = 'block';
-    });
+// 更新時刻
+const now = new Date();
+document.getElementById("update-time").textContent = now.toLocaleString("ja-JP") + " 更新";
+
+// --- OpenWeather ---
+fetch(`https://api.openweathermap.org/data/2.5/weather?q=okayama,jp&appid=${apiKey}&lang=ja&units=metric`)
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("ow-weather").textContent = data.weather[0].description;
+    document.getElementById("ow-temp").textContent = `${data.main.temp}℃`;
+    document.getElementById("ow-pop").textContent = (data.rain?.["1h"] || 0) + "mm";
   });
 
-  // ======== API呼び出し関数 ========
-  async function fetchWeather() {
-    try {
-      // 現在＋予報データ
-      const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${CITY}&appid=${API_KEY}&lang=ja&units=metric`);
-      const data = await res.json();
-      console.log(data);
+// --- 気象庁 ---
+fetch("https://www.jma.go.jp/bosai/forecast/data/forecast/330000.json")
+  .then(res => res.json())
+  .then(data => {
+    const area = data[0].timeSeries[0];
+    document.getElementById("jma-weather").textContent = area.areas[0].weathers[0];
+    document.getElementById("jma-temp").textContent = "-";
+    document.getElementById("jma-pop").textContent = area.areas[0].pops[0] + "%";
+  });
 
-      // 今日のデータ
-      const now = data.list[0];
-      document.getElementById("todayWeather").textContent = now.weather[0].description;
-      document.getElementById("todayTemp").textContent = `${now.main.temp.toFixed(1)} ℃`;
-      document.getElementById("todayRainProb").textContent = (now.pop * 100).toFixed(0) + "%";
-      document.getElementById("todayRain").textContent = (now.rain ? now.rain["3h"] : 0) + " mm";
+// --- MET Norway ---
+fetch("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=34.655&lon=133.919")
+  .then(res => res.json())
+  .then(data => {
+    const t = data.properties.timeseries[0];
+    document.getElementById("met-weather").textContent = t.data.next_1_hours.summary.symbol_code;
+    document.getElementById("met-temp").textContent = t.data.instant.details.air_temperature + "℃";
+    document.getElementById("met-pop").textContent = (t.data.next_1_hours.details.precipitation_amount || 0) + "mm";
+  });
 
-      // 明日のデータ（24時間後のデータを参照）
-      const tomorrow = data.list[8];
-      document.getElementById("tomorrowWeather").textContent = tomorrow.weather[0].description;
-      document.getElementById("tomorrowTemp").textContent = `${tomorrow.main.temp_max.toFixed(1)} / ${tomorrow.main.temp_min?.toFixed(1) || tomorrow.main.temp.toFixed(1)} ℃`;
-      document.getElementById("tomorrowRainProb").textContent = (tomorrow.pop * 100).toFixed(0) + "%";
+// --- タブ切替 ---
+const tabs = document.querySelectorAll('.tab');
+const contents = document.querySelectorAll('.content');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.style.display = 'none');
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).style.display = 'block';
+  });
+});
 
-      // 週間データ（3時間間隔 → 1日ごと8件スキップ）
-      const weekTable = document.getElementById("weekTable");
-      weekTable.innerHTML = "<tr><th>日付</th><th>天気</th><th>最高気温</th><th>最低気温</th><th>降水確率</th></tr>";
-      for (let i = 0; i < data.list.length; i += 8) {
-        const d = data.list[i];
-        const date = new Date(d.dt * 1000);
-        const dateStr = `${date.getMonth()+1}/${date.getDate()}(${["日","月","火","水","木","金","土"][date.getDay()]})`;
-        const row = `<tr>
-          <td>${dateStr}</td>
-          <td>${d.weather[0].description}</td>
-          <td>${d.main.temp_max?.toFixed(1) || "-"} ℃</td>
-          <td>${d.main.temp_min?.toFixed(1) || "-"} ℃</td>
-          <td>${(d.pop * 100).toFixed(0)}%</td>
-        </tr>`;
-        weekTable.insertAdjacentHTML("beforeend", row);
-      }
-
-      // 更新時刻
-      document.getElementById("update-time").textContent =
-        "更新: " + new Date().toLocaleString("ja-JP");
-
-    } catch (err) {
-      console.error("天気データ取得エラー:", err);
-      document.getElementById("update-time").textContent = "データ取得に失敗しました";
-    }
-  }
-
-  // 初回実行
-  fetchWeather();
-
-  // Service Worker登録
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log('✅ Service Worker registered'))
-      .catch(err => console.log('❌ Service Worker failed:', err));
-  }
+// --- Service Worker登録 ---
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+  .then(() => console.log("✅ Service Worker registered"))
+  .catch(err => console.log("SW registration failed", err));
+}
 </script>
-
 </body>
 </html>
