@@ -12,9 +12,11 @@
     .tab { padding: 0.8rem 1.5rem; cursor: pointer; border-radius: 20px; transition: all 0.3s; }
     .tab.active { background: #3498db; color: white; }
     .content { padding: 1rem; display: grid; gap: 1rem; max-width: 600px; margin: 0 auto; }
-    .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; }
+    .card-info { flex: 1; }
     .card h3 { margin: 0 0 0.5rem 0; color: #7f8c8d; font-size: 0.9rem; }
     .card .temp { font-size: 1.5rem; font-weight: bold; }
+    .icon { font-size: 3rem; margin-left: 1rem; }
     .footer { text-align: center; font-size: 0.7rem; color: #888; padding: 2rem; }
   </style>
 </head>
@@ -31,6 +33,16 @@
     const OPENWEATHER_KEY = "789f321d8b6cf36d45ac0ae811715656";
     const WEATHERAPI_KEY = "bbeada1be39e4803adc140054251410";
     const lat = 34.655; const lon = 133.919; const city = "Okayama";
+
+    function getWeatherIcon(desc) {
+      if (desc.includes("雷")) return "⛈️";
+      if (desc.includes("雨")) return "🌧️";
+      if (desc.includes("晴") && desc.includes("曇")) return "⛅";
+      if (desc.includes("晴")) return "☀️";
+      if (desc.includes("曇")) return "☁️";
+      return "🌤️";
+    }
+
     const tabs = document.querySelectorAll(".tab"); const content = document.getElementById("content");
     tabs.forEach(tab => {
       tab.addEventListener("click", () => {
@@ -39,6 +51,7 @@
         loadWeather(tab.dataset.period);
       });
     });
+
     async function loadWeather(period) {
       content.textContent = "読み込み中...";
       try {
@@ -52,14 +65,30 @@
         else renderTodayTomorrow(openData, weatherapiData, period);
       } catch (e) { content.innerHTML = `<p style="color:red; text-align:center;">データ取得に失敗しました。</p>`; }
     }
+
     function renderTodayTomorrow(open, weatherapi, period) {
       const targetDay = period === "today" ? 0 : 1;
       const ow = open.list[targetDay * 8];
       const wa = weatherapi.forecast.forecastday[targetDay];
       content.innerHTML = `
-        <div class="card"><h3>OpenWeather</h3><div class="temp">${ow.main.temp_max.toFixed(0)}° / ${ow.main.temp_min.toFixed(0)}°</div><p>${ow.weather[0].description} | 降水確率: ${ow.pop * 100}%</p></div>
-        <div class="card"><h3>WeatherAPI</h3><div class="temp">${wa.day.maxtemp_c.toFixed(0)}° / ${wa.day.mintemp_c.toFixed(0)}°</div><p>${wa.day.condition.text} | 降水確率: ${wa.day.daily_chance_of_rain}%</p></div>`;
+        <div class="card">
+          <div class="card-info">
+            <h3>OpenWeather</h3>
+            <div class="temp">${ow.main.temp_max.toFixed(0)}° / ${ow.main.temp_min.toFixed(0)}°</div>
+            <p>${ow.weather[0].description} | 降水確率: ${ow.pop * 100}%</p>
+          </div>
+          <div class="icon">${getWeatherIcon(ow.weather[0].description)}</div>
+        </div>
+        <div class="card">
+          <div class="card-info">
+            <h3>WeatherAPI</h3>
+            <div class="temp">${wa.day.maxtemp_c.toFixed(0)}° / ${wa.day.mintemp_c.toFixed(0)}°</div>
+            <p>${wa.day.condition.text} | 降水確率: ${wa.day.daily_chance_of_rain}%</p>
+          </div>
+          <div class="icon">${getWeatherIcon(wa.day.condition.text)}</div>
+        </div>`;
     }
+
     function renderWeek(open, weatherapi) {
       const grouped = {};
       open.list.forEach(item => { const date = item.dt_txt.split(" ")[0]; if (!grouped[date]) grouped[date] = []; grouped[date].push(item); });
@@ -68,7 +97,15 @@
         const date = wa.date; const items = grouped[date] || [];
         const avgTemp = items.length ? (items.reduce((a, b) => a + b.main.temp, 0) / items.length).toFixed(1) : "-";
         const desc = items.length ? items[0].weather[0].description : "-";
-        html += `<div class="card"><h3>${date}</h3><p><strong>OpenWeather:</strong> ${desc} (${avgTemp}°)</p><p><strong>WeatherAPI:</strong> ${wa.day.condition.text} (${wa.day.avgtemp_c}°)</p></div>`;
+        html += `
+          <div class="card">
+            <div class="card-info">
+              <h3>${date}</h3>
+              <p><strong>OpenWeather:</strong> ${desc} (${avgTemp}°)</p>
+              <p><strong>WeatherAPI:</strong> ${wa.day.condition.text} (${wa.day.avgtemp_c}°)</p>
+            </div>
+            <div class="icon">${getWeatherIcon(desc)}</div>
+          </div>`;
       });
       content.innerHTML = html;
     }
