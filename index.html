@@ -33,7 +33,7 @@
   <div id="content" class="content">位置情報または都市を検索してください...</div>
   <script>
     const OPENWEATHER_KEY = "789f321d8b6cf36d45ac0ae811715656";
-    const WEATHERAPI_KEY = "bbeada1be39e4803adc140054251410";
+    const WEATHERAPI_KEY="bbeada1be39e4803adc140054251410";
     let currentLat = 34.655, currentLon = 133.919, currentName = "岡山市";
 
     async function loadWeather(period = "today") {
@@ -53,17 +53,21 @@
     }
 
     function searchCity() {
-      const city = document.getElementById("cityInput").value;
+      const city = document.getElementById("cityInput").value.trim();
       if (!city) return;
       fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city},JP&limit=5&appid=${OPENWEATHER_KEY}`)
         .then(res => res.json())
         .then(data => {
-          if (data.length > 0) {
-            const match = data.find(i => (i.local_names?.ja || "").includes(city)) || data[0];
+          const match = data.find(i => 
+             i.local_names?.ja === city || 
+             i.local_names?.ja === city + "市" || 
+             i.name === city
+          );
+          if (match) {
             currentLat = match.lat; currentLon = match.lon;
             currentName = match.local_names?.ja || match.name;
             loadWeather();
-          } else alert("都市が見つかりません");
+          } else alert("「" + city + "」という地名が見つかりませんでした。市町村名を正確に入力してください。");
         });
     }
 
