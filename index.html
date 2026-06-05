@@ -8,9 +8,8 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; color: #333; }
     header { background: #2c3e50; color: white; padding: 1.5rem; text-align: center; }
-    header h1 { margin: 0; font-size: 1.2rem; }
-    #cityName { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; }
-    .search-box { display: flex; justify-content: center; gap: 0.5rem; margin-top: 10px; }
+    .header-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; }
+    .search-box { display: flex; justify-content: center; gap: 0.5rem; }
     .tabs { display: flex; background: white; padding: 0.5rem; gap: 0.5rem; justify-content: center; }
     .tab { padding: 0.8rem 1.5rem; cursor: pointer; border-radius: 20px; transition: all 0.3s; }
     .tab.active { background: #3498db; color: white; }
@@ -23,9 +22,9 @@
 </head>
 <body>
   <header>
-    <div id="cityName">読み込み中...</div>
+    <div class="header-title" id="cityName">天気比較</div>
     <div class="search-box">
-      <input type="text" id="cityInput" placeholder="都市名を入力" />
+      <input type="text" id="cityInput" placeholder="都市名 (例: 岡山市)" />
       <button onclick="searchCity()">検索</button>
     </div>
   </header>
@@ -39,12 +38,11 @@
   <script>
     const OPENWEATHER_KEY = "789f321d8b6cf36d45ac0ae811715656";
     const WEATHERAPI_KEY = "bbeada1be39e4803adc140054251410";
-    let currentLat = 34.655, currentLon = 133.919, currentPeriod = "today";
-    const content = document.getElementById("content");
+    let currentLat = 34.655, currentLon = 133.919, currentName = "岡山市";
 
     async function loadWeather(period = "today") {
-      currentPeriod = period;
       content.textContent = "読み込み中...";
+      document.getElementById("cityName").textContent = currentName + " 天気比較";
       try {
         const [openRes, weatherapiRes] = await Promise.all([
           fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${currentLat}&lon=${currentLon}&appid=${OPENWEATHER_KEY}&units=metric&lang=ja`),
@@ -52,22 +50,22 @@
         ]);
         const openData = await openRes.json();
         const weatherapiData = await weatherapiRes.json();
-        document.getElementById("cityName").textContent = openData.city.name + " 天気比較";
-        if (period === "week") renderWeek(openData, weatherapiData);
-        else renderTodayTomorrow(openData, weatherapiData, period);
-      } catch (e) { content.innerHTML = `<p style="color:red; text-align:center;">取得失敗</p>`; }
+        period === "week" ? renderWeek(openData, weatherapiData) : renderTodayTomorrow(openData, weatherapiData, period);
+      } catch (e) { content.innerHTML = `<p style="color:red; text-align:center;">データ取得失敗</p>`; }
     }
 
     function searchCity() {
       const city = document.getElementById("cityInput").value;
       if (!city) return;
-      fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&appid=${OPENWEATHER_KEY}`)
+      fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city},JP&limit=1&appid=${OPENWEATHER_KEY}`)
         .then(res => res.json())
         .then(data => {
           if (data.length > 0) {
-            currentLat = data[0].lat; currentLon = data[0].lon;
-            loadWeather(currentPeriod);
-          } else alert("都市が見つかりません");
+            const loc = data[0];
+            currentLat = loc.lat; currentLon = loc.lon;
+            currentName = loc.local_names?.ja || loc.name;
+            loadWeather();
+          } else { alert("都市が見つかりません"); }
         });
     }
 
@@ -80,23 +78,23 @@
     }
 
     function renderTodayTomorrow(open, weatherapi, period) {
-      const targetDay = period === "today" ? 0 : 1;
-      const ow = open.list[targetDay * 8];
-      const wa = weatherapi.forecast.forecastday[targetDay];
+      const idx = period === "today" ? 0 : 1;
+      const ow = open.list[idx * 8];
+      const wa = weatherapi.forecast.forecastday[idx];
       content.innerHTML = `
         <div class="card"><h3>OpenWeather</h3><div class="temp">${ow.main.temp_max.toFixed(0)}° / ${ow.main.temp_min.toFixed(0)}°</div><p>${getWeatherIcon(ow.weather[0].description)} ${ow.weather[0].description} | 降水確率: ${ow.pop * 100}%</p></div>
         <div class="card"><h3>WeatherAPI</h3><div class="temp">${wa.day.maxtemp_c.toFixed(0)}° / ${wa.day.mintemp_c.toFixed(0)}°</div><p>${getWeatherIcon(wa.day.condition.text)} ${wa.day.condition.text} | 降水確率: ${wa.day.daily_chance_of_rain}%</p></div>`;
     }
 
     function renderWeek(open, weatherapi) {
-      const grouped = {};
-      open.list.forEach(item => { const date = item.dt_txt.split(" ")[0]; if (!grouped[date]) grouped[date] = []; grouped[date].push(item); });
       let html = "";
-      weatherapi.forecast.forecastday.forEach((wa, i) => {
-        const date = wa.date; const items = grouped[date] || [];
-        const avgTemp = items.length ? (items.reduce((a, b) => a + b.main.temp, 0) / items.length).toFixed(1) : "-";
+      const grouped = {};
+      open.list.forEach(i => { const d = i.dt_txt.split(" ")[0]; if (!grouped[d]) grouped[d] = []; grouped[d].push(i); });
+      weatherapi.forecast.forecastday.forEach(wa => {
+        const items = grouped[wa.date] || [];
+        const avg = items.length ? (items.reduce((a, b) => a + b.main.temp, 0) / items.length).toFixed(1) : "-";
         const desc = items.length ? items[0].weather[0].description : "-";
-        html += `<div class="card"><h3>${date}</h3><p><strong>OpenWeather:</strong> ${getWeatherIcon(desc)} ${desc} (${avgTemp}°)</p><p><strong>WeatherAPI:</strong> ${getWeatherIcon(wa.day.condition.text)} ${wa.day.condition.text} (${wa.day.avgtemp_c}°)</p></div>`;
+        html += `<div class="card"><h3>${wa.date}</h3><p><strong>OW:</strong> ${getWeatherIcon(desc)} ${desc} (${avg}°)</p><p><strong>WAPI:</strong> ${getWeatherIcon(wa.day.condition.text)} ${wa.day.condition.text} (${wa.day.avgtemp_c}°)</p></div>`;
       });
       content.innerHTML = html;
     }
@@ -110,7 +108,7 @@
     });
 
     navigator.geolocation.getCurrentPosition(
-      pos => { currentLat = pos.coords.latitude; currentLon = pos.coords.longitude; loadWeather(); },
+      pos => { currentLat = pos.coords.latitude; currentLon = pos.coords.longitude; currentName = "現在地"; loadWeather(); },
       () => loadWeather()
     );
   </script>
