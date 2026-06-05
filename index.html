@@ -18,10 +18,18 @@
     .card .temp { font-size: 1.5rem; font-weight: bold; }
     .icon { font-size: 3rem; margin-left: 1rem; }
     .footer { text-align: center; font-size: 0.7rem; color: #888; padding: 2rem; }
+    .search-area { display: flex; justify-content: center; padding: 1rem; background: white; border-bottom: 1px solid #eee; gap: 0.5rem; }
+    .search-area input { flex-grow: 1; max-width: 400px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 20px; font-size: 1rem; }
+    .search-area button { padding: 0.8rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 20px; cursor: pointer; transition: background 0.3s; }
+    .search-area button:hover { background: #218838; }
   </style>
 </head>
 <body>
   <header>岡山市 天気比較</header>
+  <div class="search-area">
+    <input type="text" id="addressInput" placeholder="住所を入力してください（例: 東京都渋谷区）" />
+    <button id="searchButton">検索</button>
+  </div>
   <div class="tabs">
     <div class="tab active" data-period="today">今日</div>
     <div class="tab" data-period="tomorrow">明日</div>
@@ -32,7 +40,7 @@
   <script>
     const OPENWEATHER_KEY = "789f321d8b6cf36d45ac0ae811715656";
     const WEATHERAPI_KEY = "bbeada1be39e4803adc140054251410";
-    const lat = 34.655; const lon = 133.919; const city = "Okayama";
+    let currentLat = 34.655; let currentLon = 133.919; let currentCity = "Okayama";
 
     function getWeatherIcon(desc) {
       if (desc.includes("雷")) return "⛈️";
@@ -43,22 +51,40 @@
       return "🌤️";
     }
 
-    const tabs = document.querySelectorAll(".tab"); const content = document.getElementById("content");
+    const tabs = document.querySelectorAll(".tab");
+    const content = document.getElementById("content");
+    const addressInput = document.getElementById("addressInput");
+    const searchButton = document.getElementById("searchButton");
+
     tabs.forEach(tab => {
       tab.addEventListener("click", () => {
         tabs.forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
-        loadWeather(tab.dataset.period);
+        loadWeather(tab.dataset.period, currentLat, currentLon, currentCity);
       });
     });
 
-    async function loadWeather(period) {
+    searchButton.addEventListener("click", async () => {
+      const inputAddress = addressInput.value.trim();
+      if (inputAddress) {
+        // ここにジオコーディングAPI呼び出しロジックを追加し、currentLat/Lon/Cityを更新する
+        // 今は仮で入力があれば都市名を更新するだけにとどめる
+        currentCity = inputAddress; // 仮に都市名として扱う
+        await loadWeather("today", currentLat, currentLon, currentCity);
+        tabs.forEach(t => t.classList.remove("active"));
+        document.querySelector(".tab[data-period='today']").classList.add("active");
+      } else {
+        alert("住所を入力してください。");
+      }
+    });
+
+    async function loadWeather(period, lat, lon, city) {
       content.textContent = "読み込み中...";
       try {
         const [openRes, weatherapiRes] = await Promise.all([
           fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric&lang=ja`),
           fetch(`https://api.weatherapi.com/v1/forecast.json?key=${WEATHERAPI_KEY}&q=${city}&days=7&lang=ja`)
-        ]);
+         ]);
         const openData = await openRes.json();
         const weatherapiData = await weatherapiRes.json();
         if (period === "week") renderWeek(openData, weatherapiData);
@@ -109,7 +135,7 @@
       });
       content.innerHTML = html;
     }
-    loadWeather("today");
+    loadWeather("today", currentLat, currentLon, currentCity);
     if ("serviceWorker" in navigator) { navigator.serviceWorker.register("service-worker.js"); }
   </script>
 </body>
